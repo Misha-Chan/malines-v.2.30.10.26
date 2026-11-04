@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Malines Community — landing / waiting page for the not-yet-launched strategy platform.",
   "engines": {
-    "node": ">=22.12"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "vite",

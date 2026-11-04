@@ -1,0 +1,74 @@
+# Malines Server (1.1.0.13 beta)
+
+سيرفر اللعبة: يحفظ حالة العالم، يطبّق دورة الزمن (30 دقيقة واقعية = 3.75 يوم لعبة)، ويولّد `SAR.json` موقّعاً بمفتاح Ed25519.
+
+## التشغيل
+
+```bash
+cd server
+npm install
+npm run tick      # ينشئ قاعدة البيانات + أول لقطة موقّعة
+npm start         # يشغّل السيرفر على http://127.0.0.1:4000
+```
+
+أوامر مساعدة:
+
+```bash
+npm run typecheck
+npm run verify -- .data/snapshots/SAR-*.json   # التحقق من التوقيع
+```
+
+## الإعدادات (متغيرات البيئة)
+
+| المتغير | الافتراضي | الوصف |
+|---|---|---|
+| `PORT` | `4000` | منفذ السيرفر |
+| `HOST` | `127.0.0.1` | عنوان الاستماع |
+| `MALINES_DATA_DIR` | `.data` | مجلد قاعدة البيانات واللقطات والمفاتيح |
+| `MALINES_TICK_MINUTES` | `30` | دورة التوليد بالدقائق الواقعية |
+| `MALINES_TICK_SECONDS` | `0` | للتطوير: دورة بالثواني (تتجاوز الدقائق) |
+| `MALINES_ADMIN_TOKEN` | `dev-admin` | رمز لوحة الإدارة |
+| `MALINES_KEY_ID` | `mln-dev-1` | معرّف مفتاح التوقيع |
+
+المفاتيح تُولَّد تلقائياً في `.data/keys/` (غير مرفوعة إلى Git).
+
+## واجهة API
+
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/api/health` | حالة السيرفر والزمن داخل اللعبة |
+| GET | `/api/key` | المفتاح العام للتحقق من التوقيع |
+| GET | `/api/sar` | تنزيل أحدث `SAR.json` |
+| GET | `/api/sar/meta` | بيانات اللقطة (معرّف، بصمة، توقيع، زمن) |
+| GET | `/api/states` | قائمة الدول |
+| GET | `/api/provinces/:id` | مقاطعة + مستوطناتها |
+| POST | `/api/decisions` | إرسال قرار حيّ `{playerId, stateId, kind, action, payload, gameTime}` |
+| POST | `/api/ndsv` | استيراد لقطة قرارات غير متصلة `{playerId, stateId, gameTime, decisions[]}` |
+| GET | `/api/console/queue?status=pending` | طابور المراجعة (يتطلب `x-admin-token`) |
+| POST | `/api/console/decisions/:id/review` | موافقة/رفض `{status, note, reviewer}` (يتطلب رمز الإدارة) |
+| POST | `/api/console/tick` | تنفيذ دورة يدوياً (يتطلب رمز الإدارة) |
+| POST | `/api/console/snapshot` | توليد لقطة فورية (يتطلب رمز الإدارة) |
+
+## البنية
+
+```
+src/
+  config.ts      الإعدادات والثوابت
+  db.ts          SQLite (node:sqlite) + المخطط
+  schema.sql     جداول العالم
+  seed.ts        عالم 1900 التجريبي (10 دول، 10 مقاطعات)
+  time.ts        تحويل الزمن الواقعي إلى زمن اللعبة (1:180)
+  canonical.ts   تسلسل JSON ثابت للتوقيع
+  signature.ts   Ed25519
+  snapshot.ts    بناء SAR.json وتوقيعه وتخزينه
+  tick.ts        دورة التحديث
+  server.ts      Fastify API
+  verify-cli.ts  أداة التحقق من التوقيع
+```
+
+## القيود الحالية (بيتا)
+
+- SQLite بدل PostgreSQL (للنشر لاحقاً).
+- لا يوجد بث لحظي بعد (WebSocket).
+- لا توجد مصادقة لاعبين بعد (معرّف اللاعب يُرسل مباشرة).
+- الخريطة التجريبية 10 مقاطعات فقط؛ الخريطة الكاملة تأتي من ملفات البيانات.

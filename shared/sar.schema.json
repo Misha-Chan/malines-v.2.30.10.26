@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mln.hostaka.fun/schemas/sar.schema.json",
+  "title": "Malines SAR snapshot",
+  "type": "object",
+  "required": ["meta", "time", "world", "states", "units", "economy", "players", "leaders", "events", "memory"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["format", "version", "snapshotId", "createdAt", "gameTime", "keyId", "signature"],
+      "properties": {
+        "format": { "const": "malines.sar" },
+        "version": { "type": "string" },
+        "snapshotId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "gameTime": { "type": "string", "format": "date-time" },
+        "keyId": { "type": "string" },
+        "signature": { "type": "string" }
+      }
+    },
+    "time": {
+      "type": "object",
+      "required": ["gameTime", "realStartedAt", "tickMinutes", "ratio"],
+      "properties": {
+        "gameTime": { "type": "string", "format": "date-time" },
+        "realStartedAt": { "type": "integer" },
+        "tickMinutes": { "type": "integer", "minimum": 1 },
+        "ratio": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "world": {
+      "type": "object",
+      "required": ["regionCount", "provinceCount", "seaProvinceCount", "regions", "provinces", "settlements"],
+      "properties": {
+        "regionCount": { "type": "integer" },
+        "provinceCount": { "type": "integer" },
+        "seaProvinceCount": { "type": "integer" },
+        "regions": { "type": "array", "items": { "$ref": "#/$defs/region" } },
+        "provinces": { "type": "array", "items": { "$ref": "#/$defs/province" } },
+        "settlements": { "type": "array", "items": { "$ref": "#/$defs/settlement" } }
+      }
+    },
+    "states": { "type": "array", "items": { "$ref": "#/$defs/state" } },
+    "units": { "type": "array", "items": { "$ref": "#/$defs/unit" } },
+    "economy": { "type": "array", "items": { "$ref": "#/$defs/economy" } },
+    "players": { "type": "array", "items": { "$ref": "#/$defs/player" } },
+    "leaders": { "type": "array", "items": { "$ref": "#/$defs/leader" } },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" } },
+    "memory": { "type": "array", "items": { "$ref": "#/$defs/memory" } }
+  },
+  "$defs": {
+    "region": {
+      "type": "object",
+      "required": ["id", "name", "name_ar"],
+      "properties": { "id": { "type": "integer" }, "name": { "type": "string" }, "name_ar": { "type": "string" } }
+    },
+    "province": {
+      "type": "object",
+      "required": ["id", "region_id", "name", "name_ar", "is_sea", "terrain", "population", "loyalty"],
+      "properties": {
+        "id": { "type": "string" },
+        "region_id": { "type": "integer" },
+        "owner_id": { "type": ["string", "null"] },
+        "controller_id": { "type": ["string", "null"] },
+        "name": { "type": "string" },
+        "name_ar": { "type": "string" },
+        "is_sea": { "type": "boolean" },
+        "terrain": { "type": "string" },
+        "climate": { "type": "string" },
+        "population": { "type": "integer" },
+        "loyalty": { "type": "number" },
+        "unrest": { "type": "number" },
+        "area_km2": { "type": "number" },
+        "geometry": { "type": ["object", "null"] },
+        "neighbors": { "type": "array", "items": { "type": "string" } },
+        "resources": { "type": "array", "items": { "type": "string" } },
+        "infrastructure": { "type": "object" },
+        "garrison": { "type": "integer" },
+        "contested": { "type": "boolean" }
+      }
+    },
+    "settlement": {
+      "type": "object",
+      "required": ["id", "province_id", "name", "name_ar", "kind", "population", "loyalty"],
+      "properties": {
+        "id": { "type": "string" },
+        "province_id": { "type": "string" },
+        "name": { "type": "string" },
+        "name_ar": { "type": "string" },
+        "kind": { "type": "string" },
+        "population": { "type": "integer" },
+        "loyalty": { "type": "number" },
+        "garrison": { "type": "integer" },
+        "problems": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "state": {
+      "type": "object",
+      "required": ["id", "name", "name_ar", "political_system", "treasury", "industry", "agriculture", "stability"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "name_ar": { "type": "string" },
+        "political_system": { "type": "string" },
+        "color": { "type": "string" },
+        "treasury": { "type": "number" },
+        "industry": { "type": "number" },
+        "agriculture": { "type": "number" },
+        "stability": { "type": "number" },
+        "legitimacy": { "type": "number" },
+        "is_npc": { "type": "boolean" }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "required": ["id", "state_id", "province_id", "name", "kind", "strength", "morale", "supply", "training"],
+      "properties": {
+        "id": { "type": "string" },
+        "state_id": { "type": "string" },
+        "province_id": { "type": "string" },
+        "name": { "type": "string" },
+        "kind": { "type": "string" },
+        "strength": { "type": "integer" },
+        "morale": { "type": "number" },
+        "supply": { "type": "number" },
+        "training": { "type": "number" },
+        "experience": { "type": "number" },
+        "equipment": { "type": "array", "items": { "type": "object" } },
+        "demographics": { "type": "object" },
+        "commander": { "type": ["string", "null"] }
+      }
+    },
+    "economy": {
+      "type": "object",
+      "required": ["state_id", "treasury", "industry", "agriculture", "stability", "legitimacy"],
+      "properties": {
+        "state_id": { "type": "string" },
+        "treasury": { "type": "number" },
+        "industry": { "type": "number" },
+        "agriculture": { "type": "number" },
+        "stability": { "type": "number" },
+        "legitimacy": { "type": "number" }
+      }
+    },
+    "player": {
+      "type": "object",
+      "required": ["id", "handle", "role"],
+      "properties": {
+        "id": { "type": "string" },
+        "handle": { "type": "string" },
+        "state_id": { "type": ["string", "null"] },
+        "role": { "type": "string" },
+        "created_at": { "type": "integer" }
+      }
+    },
+    "leader": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "state_id": { "type": ["string", "null"] },
+        "name": { "type": "string" },
+        "title": { "type": ["string", "null"] },
+        "born": { "type": ["string", "null"] },
+        "traits": { "type": "object" }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": ["id", "game_time", "kind"],
+      "properties": {
+        "id": { "type": "string" },
+        "game_time": { "type": "string", "format": "date-time" },
+        "kind": { "type": "string" },
+        "payload": { "type": "object" },
+        "created_at": { "type": "integer" }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "required": ["id", "state_id", "target_id", "kind", "weight", "game_time"],
+      "properties": {
+        "id": { "type": "string" },
+        "state_id": { "type": "string" },
+        "target_id": { "type": "string" },
+        "kind": { "type": "string" },
+        "weight": { "type": "number" },
+        "note": { "type": ["string", "null"] },
+        "game_time": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

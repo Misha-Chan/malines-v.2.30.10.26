@@ -5,3 +5,14 @@ dist-ssr
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+server/node_modules
+server/.data
+server/dist
+server/.env
+android/.gradle
+android/local.properties
+android/build
+android/app/build
+android/.idea
+android/*.iml
+*.apk

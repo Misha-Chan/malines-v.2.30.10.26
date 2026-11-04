@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mln.hostaka.fun/schemas/ndsv.schema.json",
+  "title": "Malines nDSV — offline player decision snapshot",
+  "type": "object",
+  "required": ["format", "version", "playerId", "stateId", "gameTime", "createdAt", "decisions", "signature"],
+  "properties": {
+    "format": { "const": "malines.ndsv" },
+    "version": { "type": "string" },
+    "playerId": { "type": "string" },
+    "stateId": { "type": "string" },
+    "gameTime": { "type": "string", "format": "date-time" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "baseSnapshotId": { "type": "string" },
+    "decisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "action", "gameTime"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "enum": ["military", "economic", "diplomatic", "internal"] },
+          "action": { "type": "string" },
+          "payload": { "type": "object" },
+          "gameTime": { "type": "string", "format": "date-time" },
+          "provinceId": { "type": "string" },
+          "unitId": { "type": "string" }
+        }
+      }
+    },
+    "signature": { "type": "string" },
+    "keyId": { "type": "string" }
+  }
+}
