@@ -3,6 +3,7 @@ import { seedIfEmpty, worldStats } from './seed.js';
 import { latestSnapshot } from './snapshot.js';
 import { buildServer } from './server.js';
 import { runTick } from './tick.js';
+import { broadcast } from './live.js';
 
 const seeded = seedIfEmpty();
 if (seeded) console.log('[seed] minimal 1900 world created');
@@ -14,7 +15,7 @@ if (!latestSnapshot()) {
 
 console.log('[world]', worldStats());
 
-const app = buildServer();
+const app = await buildServer();
 await app.listen({ port: PORT, host: HOST });
 console.log(`[server] http://${HOST}:${PORT}`);
 
@@ -24,6 +25,7 @@ console.log(`[tick] every ${TICK_SECONDS > 0 ? `${TICK_SECONDS}s (dev)` : `${TIC
 setInterval(() => {
   try {
     const result = runTick(TICK_SECONDS > 0 ? TICK_SECONDS / 60 : TICK_MINUTES);
+    broadcast('tick', { gameTime: result.gameTime, snapshot: result.snapshot });
     console.log(`[tick] ${result.snapshot.id} gameTime=${result.gameTime}`);
   } catch (error) {
     console.error('[tick] failed', error);

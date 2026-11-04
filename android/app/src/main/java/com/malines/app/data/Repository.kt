@@ -18,6 +18,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import java.util.concurrent.TimeUnit
 
 data class LocalDecision(
@@ -103,6 +105,18 @@ class Repository(private val context: Context) {
             if (!response.isSuccessful) error("HTTP ${response.code}: $body")
             body
         }
+    }
+
+    /** Open the live event stream. Callback runs on an OkHttp thread. */
+    fun connectLive(baseUrl: String, onEvent: (String) -> Unit): WebSocket {
+        val wsUrl = baseUrl.trimEnd('/').replaceFirst("http", "ws") + "/ws"
+        val request = Request.Builder().url(wsUrl).build()
+        return client.newWebSocket(
+            request,
+            object : WebSocketListener() {
+                override fun onMessage(webSocket: WebSocket, text: String) = onEvent(text)
+            },
+        )
     }
 
     /** Build a local nDSV snapshot (signature is added in a later beta). */

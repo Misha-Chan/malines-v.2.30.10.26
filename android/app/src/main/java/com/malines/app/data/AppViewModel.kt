@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import okhttp3.WebSocket
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -36,6 +37,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var localDecisions by mutableStateOf<List<LocalDecision>>(emptyList())
         private set
 
+    private var liveSocket: WebSocket? = null
+
     init {
         viewModelScope.launch {
             runCatching { repository.loadRegion() }
@@ -43,11 +46,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 .onFailure { message = "تعذر تحميل الخريطة: ${it.message}" }
         }
         refresh()
+        connectLive()
     }
 
     fun updateServerUrl(value: String) {
         baseUrl = value
         prefs.edit().putString("baseUrl", value).apply()
+        connectLive()
+    }
+
+    private fun connectLive() {
+        liveSocket?.close(1000, "reconnect")
+        runCatching {
+            liveSocket = repository.connectLive(baseUrl) { message ->
+                if (!message.contains("\"type\":\"hello\"")) refresh()
+            }
+        }
     }
 
     fun refresh() {

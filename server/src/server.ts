@@ -1,11 +1,15 @@
 import Fastify from 'fastify';
+import websocket from '@fastify/websocket';
+import fs from 'node:fs';
+import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { all, get, run } from './db.js';
-import { ADMIN_TOKEN, FORMAT_VERSION, HOST, PORT } from './config.js';
+import { ADMIN_TOKEN, FORMAT_VERSION, HOST, PORT, SERVER_ROOT } from './config.js';
 import { latestSnapshot, createSnapshot } from './snapshot.js';
 import { publicKeyB64 } from './signature.js';
 import { runTick } from './tick.js';
 import { worldStats } from './seed.js';
+import { addClient, broadcast, clientCount, removeClient } from './live.js';
 
 const DECISION_KINDS = new Set(['military', 'economic', 'diplomatic', 'internal']);
 const REVIEW_STATUSES = new Set(['approved', 'rejected']);
@@ -18,8 +22,9 @@ function isAdmin(token: unknown): boolean {
   return typeof token === 'string' && token === ADMIN_TOKEN;
 }
 
-export function buildServer() {
+export async function buildServer() {
   const app = Fastify({ logger: true });
+  await app.register(websocket);
 
   app.addHook('onRequest', async (request, reply) => {
     reply.header('Access-Control-Allow-Origin', '*');
@@ -34,8 +39,30 @@ export function buildServer() {
       ok: true,
       version: FORMAT_VERSION,
       gameTime: game?.game_time ?? null,
+      clients: clientCount(),
       stats: worldStats(),
     };
+  });
+
+  const consoleFile = path.join(SERVER_ROOT, 'public', 'console.html');
+  const consoleHtml = fs.existsSync(consoleFile)
+    ? fs.readFileSync(consoleFile, 'utf8')
+    : '<html dir="rtl"><body style="background:#050505;color:#d4af37;font-family:sans-serif">لوحة الإدارة غير مثبتة.</body></html>';
+
+  app.get('/console', async (_request, reply) => reply.type('text/html; charset=utf-8').send(consoleHtml));
+  app.get('/', async (_request, reply) => reply.redirect('/console'));
+
+  app.get('/ws', { websocket: true }, (socket) => {
+    addClient(socket);
+    const game = get<{ game_time: string }>('SELECT game_time FROM game WHERE id = 1');
+    socket.send(
+      JSON.stringify({
+        type: 'hello',
+        at: Date.now(),
+        payload: { gameTime: game?.game_time ?? null, clients: clientCount(), version: FORMAT_VERSION },
+      }),
+    );
+    socket.on('close', () => removeClient(socket));
   });
 
   app.get('/api/key', async () => ({
@@ -124,6 +151,7 @@ export function buildServer() {
       body.source === 'ndsv' ? 'ndsv' : 'live',
     );
 
+    broadcast('decision', { id: decisionId, stateId: body.stateId, kind: body.kind, action: body.action, gameTime });
     reply.code(201);
     return { id: decisionId, status: 'pending', gameTime };
   });
@@ -164,6 +192,7 @@ export function buildServer() {
       imported.push(decisionId);
     }
 
+    broadcast('ndsv', { stateId: body.stateId, imported: imported.length });
     reply.code(201);
     return { imported: imported.length, ids: imported, status: 'pending_human_review' };
   });
@@ -208,6 +237,7 @@ export function buildServer() {
       Date.now(),
       decisionId,
     );
+    broadcast('review', { id: decisionId, status: body.status, reviewer: body.reviewer ?? 'admin' });
     return { id: decisionId, status: body.status };
   });
 
@@ -217,6 +247,7 @@ export function buildServer() {
       return { error: 'unauthorized' };
     }
     const result = runTick();
+    broadcast('tick', { gameTime: result.gameTime, snapshot: result.snapshot });
     return { gameTime: result.gameTime, daysAdvanced: result.daysAdvanced, snapshot: result.snapshot };
   });
 
@@ -225,14 +256,16 @@ export function buildServer() {
       reply.code(401);
       return { error: 'unauthorized' };
     }
-    return createSnapshot();
+    const snapshot = createSnapshot();
+    broadcast('snapshot', snapshot);
+    return snapshot;
   });
 
   return app;
 }
 
 export async function startServer() {
-  const app = buildServer();
+  const app = await buildServer();
   await app.listen({ port: PORT, host: HOST });
   return app;
 }

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مالينز — لوحة الإدارة</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #050505;
+      --surface: #0d0d0d;
+      --line: #232323;
+      --red: #c0392b;
+      --gold: #d4af37;
+      --paper: #e8e2d6;
+      --muted: #9a948a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--paper);
+      font-family: Cairo, system-ui, sans-serif; min-height: 100vh;
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 18px 24px; border-bottom: 1px solid var(--line);
+      position: sticky; top: 0; background: rgba(5,5,5,.94); backdrop-filter: blur(8px); z-index: 5;
+    }
+    .brand { display: flex; align-items: baseline; gap: 12px; }
+    .brand h1 { font-size: 20px; margin: 0; color: var(--gold); font-weight: 800; }
+    .brand span { color: var(--muted); font-size: 12px; }
+    .status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #555; }
+    .dot.on { background: #3fae6a; box-shadow: 0 0 10px #3fae6a88; }
+    .dot.off { background: var(--red); }
+    main { padding: 20px 24px 60px; max-width: 1280px; margin: 0 auto; }
+    .bar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 18px;
+    }
+    input[type=password], input[type=text] {
+      background: #111; border: 1px solid var(--line); color: var(--paper);
+      border-radius: 10px; padding: 9px 12px; font-family: inherit; min-width: 220px;
+    }
+    button {
+      background: #171717; color: var(--paper); border: 1px solid var(--line);
+      border-radius: 10px; padding: 9px 14px; font-family: inherit; cursor: pointer; font-size: 13px;
+      transition: .15s border-color, .15s background;
+    }
+    button:hover { border-color: var(--gold); }
+    button.primary { background: var(--red); border-color: var(--red); color: #fff; }
+    button.primary:hover { background: #d0432f; }
+    button.gold { color: var(--gold); border-color: #4b3f1a; }
+    .grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 18px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+    .panel h2 {
+      margin: 0; padding: 13px 16px; font-size: 14px; color: var(--gold);
+      border-bottom: 1px solid var(--line); font-weight: 700;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .panel .body { padding: 14px 16px; }
+    .item { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px; background: #101010; }
+    .item .top { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .item .action { font-weight: 700; font-size: 14px; }
+    .item .meta { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+    .tag {
+      font-size: 10.5px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted);
+    }
+    .tag.ndsv { color: var(--gold); border-color: #4b3f1a; }
+    .tag.military { color: #e07a6a; border-color: #5b2a24; }
+    .tag.economic { color: #7fb7d8; border-color: #274455; }
+    .tag.diplomatic { color: #b9a6e0; border-color: #3c3355; }
+    .tag.internal { color: #a6c98f; border-color: #33452a; }
+    .actions { display: flex; gap: 8px; margin-top: 10px; }
+    .actions button { padding: 6px 12px; font-size: 12px; }
+    .ok { color: #7ed09b; }
+    .bad { color: #e07a6a; }
+    .kv { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px dashed #1c1c1c; }
+    .kv:last-child { border: none; }
+    .kv span:first-child { color: var(--muted); }
+    code { font-family: ui-monospace, monospace; font-size: 11px; color: var(--gold); word-break: break-all; }
+    .log { max-height: 320px; overflow: auto; font-size: 12px; }
+    .log div { padding: 5px 0; border-bottom: 1px dashed #1a1a1a; color: var(--muted); }
+    .log b { color: var(--paper); font-weight: 600; }
+    .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 22px 0; }
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #171717; border: 1px solid var(--gold); color: var(--paper);
+      padding: 10px 18px; border-radius: 12px; font-size: 13px; opacity: 0; pointer-events: none; transition: .25s;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>مالينز</h1>
+      <span>لوحة الإدارة · 1.1.0.13-beta</span>
+    </div>
+    <div class="status">
+      <span id="gameTime">—</span>
+      <span class="dot" id="wsDot"></span>
+      <span id="wsLabel">غير متصل</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="bar">
+      <input type="password" id="token" placeholder="رمز الإدارة" />
+      <button class="gold" id="saveToken">حفظ الرمز</button>
+      <button id="refresh">تحديث</button>
+      <button class="primary" id="tick">تنفيذ دورة</button>
+      <button id="snapshot">توليد لقطة</button>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>طابور المراجعة <span id="queueCount" class="tag">0</span></h2>
+        <div class="body" id="queue"><div class="empty">لا قرارات معلّقة</div></div>
+      </section>
+
+      <div style="display:flex; flex-direction:column; gap:18px">
+        <section class="panel">
+          <h2>أحدث لقطة</h2>
+          <div class="body" id="snapshotMeta">
+            <div class="empty">—</div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>البث اللحظي</h2>
+          <div class="body log" id="log"><div>بانتظار الأحداث…</div></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const state = {
+      token: localStorage.getItem('mln-token') || 'dev-admin',
+      queue: [],
+      meta: null,
+      ws: null,
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function toast(message, bad = false) {
+      const el = $('toast');
+      el.textContent = message;
+      el.style.borderColor = bad ? '#c0392b' : '#d4af37';
+      el.classList.add('show');
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function log(message) {
+      const el = $('log');
+      if (el.firstElementChild && el.firstElementChild.textContent.includes('بانتظار')) el.innerHTML = '';
+      const row = document.createElement('div');
+      row.innerHTML = `<b>${new Date().toLocaleTimeString('ar')}</b> — ${escapeHtml(message)}`;
+      el.prepend(row);
+      while (el.children.length > 60) el.lastElementChild.remove();
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: { 'content-type': 'application/json', 'x-admin-token': state.token, ...(options.headers || {}) },
+      });
+      const text = await response.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
+      if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
+      return data;
+    }
+
+    function renderQueue() {
+      const el = $('queue');
+      $('queueCount').textContent = state.queue.length;
+      if (!state.queue.length) {
+        el.innerHTML = '<div class="empty">لا قرارات معلّقة</div>';
+        return;
+      }
+      el.innerHTML = state.queue.map((item) => `
+        <div class="item">
+          <div class="top">
+            <div>
+              <div class="action">${escapeHtml(item.action)}</div>
+              <div class="meta">${escapeHtml(item.state_id)} · ${escapeHtml(item.game_time)}</div>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap">
+              <span class="tag ${escapeHtml(item.kind)}">${escapeHtml(item.kind)}</span>
+              <span class="tag ${item.source === 'ndsv' ? 'ndsv' : ''}">${item.source === 'ndsv' ? 'nDSV' : 'حي'}</span>
+            </div>
+          </div>
+          <div class="meta"><code>${escapeHtml(JSON.stringify(item.payload))}</code></div>
+          <div class="actions">
+            <button class="primary" onclick="review('${item.id}','approved')">موافقة</button>
+            <button onclick="review('${item.id}','rejected')">رفض</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderMeta(meta) {
+      const el = $('snapshotMeta');
+      if (!meta) { el.innerHTML = '<div class="empty">لا لقطة بعد</div>'; return; }
+      el.innerHTML = `
+        <div class="kv"><span>المعرّف</span><code>${escapeHtml(meta.id)}</code></div>
+        <div class="kv"><span>زمن اللعبة</span><span>${escapeHtml(meta.gameTime)}</span></div>
+        <div class="kv"><span>البصمة</span><code>${escapeHtml(String(meta.sha256).slice(0, 24))}…</code></div>
+        <div class="kv"><span>التوقيع</span><code>${escapeHtml(String(meta.signature).slice(0, 24))}…</code></div>
+        <div class="kv"><span>المفتاح</span><span>${escapeHtml(meta.keyId)}</span></div>
+        <div class="kv"><span>تنزيل</span><a href="/api/sar" style="color:var(--gold)">SAR.json</a></div>
+      `;
+      if (meta.gameTime) $('gameTime').textContent = meta.gameTime;
+    }
+
+    async function loadAll() {
+      try {
+        const [health, queue, meta] = await Promise.all([
+          fetch('/api/health').then((r) => r.json()),
+          api('/api/console/queue?status=pending'),
+          fetch('/api/sar/meta').then((r) => (r.ok ? r.json() : null)),
+        ]);
+        state.queue = queue;
+        state.meta = meta;
+        if (health.gameTime) $('gameTime').textContent = health.gameTime;
+        renderQueue();
+        renderMeta(meta);
+      } catch (error) {
+        toast(error.message, true);
+        log('خطأ: ' + error.message);
+      }
+    }
+
+    async function review(id, status) {
+      try {
+        await api(`/api/console/decisions/${id}/review`, {
+          method: 'POST',
+          body: JSON.stringify({ status, reviewer: 'console' }),
+        });
+        toast(status === 'approved' ? 'تمت الموافقة' : 'تم الرفض');
+        log(`${status === 'approved' ? 'موافقة' : 'رفض'} على ${id}`);
+        await loadAll();
+      } catch (error) {
+        toast(error.message, true);
+      }
+    }
+
+    async function doTick() {
+      try {
+        const result = await api('/api/console/tick', { method: 'POST' });
+        toast(`دورة جديدة: ${result.gameTime}`);
+        log(`دورة: ${result.gameTime} (لقطة ${result.snapshot.id})`);
+        await loadAll();
+      } catch (error) {
+        toast(error.message, true);
+      }
+    }
+
+    async function doSnapshot() {
+      try {
+        const snapshot = await api('/api/console/snapshot', { method: 'POST' });
+        toast('تم توليد لقطة');
+        log(`لقطة جديدة: ${snapshot.id}`);
+        await loadAll();
+      } catch (error) {
+        toast(error.message, true);
+      }
+    }
+
+    function connectWs() {
+      if (state.ws) state.ws.close();
+      const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+      const ws = new WebSocket(`${protocol}://${location.host}/ws`);
+      state.ws = ws;
+      ws.onopen = () => {
+        $('wsDot').className = 'dot on';
+        $('wsLabel').textContent = 'بث مباشر';
+        log('اتصل البث اللحظي');
+      };
+      ws.onclose = () => {
+        $('wsDot').className = 'dot off';
+        $('wsLabel').textContent = 'انقطع البث';
+        setTimeout(connectWs, 3000);
+      };
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type !== 'hello') {
+            log(`حدث: ${data.type}`);
+            loadAll();
+          }
+        } catch {}
+      };
+    }
+
+    $('token').value = state.token;
+    $('saveToken').onclick = () => {
+      state.token = $('token').value.trim();
+      localStorage.setItem('mln-token', state.token);
+      toast('حُفظ الرمز');
+      loadAll();
+    };
+    $('refresh').onclick = loadAll;
+    $('tick').onclick = doTick;
+    $('snapshot').onclick = doSnapshot;
+
+    loadAll();
+    connectWs();
+  </script>
+</body>
+</html>
