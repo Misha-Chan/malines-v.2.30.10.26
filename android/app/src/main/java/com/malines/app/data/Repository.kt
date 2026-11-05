@@ -4,6 +4,7 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -119,14 +120,14 @@ class Repository(private val context: Context) {
         )
     }
 
-    /** Build a local nDSV snapshot (signature is added in a later beta). */
-    fun buildNdsv(
+    /** Build the signed part of an offline nDSV snapshot (the envelope is added by the caller). */
+    fun buildNdsvPayload(
         playerId: String,
         stateId: String,
         gameTime: String,
         snapshotId: String,
         decisions: List<LocalDecision>,
-    ): String = buildJsonObject {
+    ): JsonObject = buildJsonObject {
         put("format", "malines.ndsv")
         put("version", "1.1.0.13")
         put("playerId", playerId)
@@ -145,7 +146,5 @@ class Repository(private val context: Context) {
                 })
             }
         })
-        put("signature", "")
-        put("keyId", "app-placeholder")
-    }.toString()
+    }
 }

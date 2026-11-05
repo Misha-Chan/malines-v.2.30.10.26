@@ -100,6 +100,15 @@ CREATE TABLE IF NOT EXISTS players (
   created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS player_keys (
+  player_id   TEXT PRIMARY KEY,
+  fingerprint TEXT NOT NULL,
+  public_key  TEXT NOT NULL,
+  key_id      TEXT,
+  algorithm   TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS decisions (
   id          TEXT PRIMARY KEY,
   player_id   TEXT,

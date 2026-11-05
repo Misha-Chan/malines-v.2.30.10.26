@@ -45,7 +45,7 @@ npm run verify -- .data/snapshots/SAR-*.json   # التحقق من التوقي�
 | GET | `/api/states` | قائمة الدول |
 | GET | `/api/provinces/:id` | مقاطعة + مستوطناتها |
 | POST | `/api/decisions` | إرسال قرار حيّ `{playerId, stateId, kind, action, payload, gameTime}` |
-| POST | `/api/ndsv` | استيراد لقطة قرارات غير متصلة `{playerId, stateId, gameTime, decisions[]}` |
+| POST | `/api/ndsv` | استيراد لقطة قرارات غير متصلة، مع توقيع اختياري `{..., signature, publicKey, keyId, algorithm}` |
 | GET | `/api/console/queue?status=pending` | طابور المراجعة (يتطلب `x-admin-token`) |
 | POST | `/api/console/decisions/:id/review` | موافقة/رفض `{status, note, reviewer}` (يتطلب رمز الإدارة) |
 | POST | `/api/console/tick` | تنفيذ دورة يدوياً (يتطلب رمز الإدارة) |
@@ -76,6 +76,17 @@ npm run verify -- .data/snapshots/SAR-*.json   # التحقق من التوقي�
 
 التطبيق يتصل تلقائياً ويعيد تحميل `SAR.json` عند أي حدث.
 
+## توقيع nDSV
+
+كل حقل في `nDSV` عدا غلاف التوقيع (`signature`، `publicKey`، `keyId`، `algorithm`)
+يُسلسَل بـ `canonicalJson` (مفاتيح مرتّبة) ثم يُوقَّع بـ **ECDSA P-256 / SHA-256**.
+التطبيق يولّد مفتاحه مرة واحدة ويحتفظ به، ويرسل المفتاح العام (SPKI DER، base64) مع كل لقطة.
+
+- توقيع صحيح: يُستورد القرار ويُعاد `verified: true`.
+- توقيع خاطئ أو معدَّل: `400 invalid_signature`.
+- مفتاح مختلف لنفس اللاعب: `409 key_mismatch` (سياسة أول مفتاح موثوق).
+- بلا توقيع: يُستورد مع `verified: false` (التوافق مع النسخ الأقدم؛ الحكم البشري يبقى الفاصل).
+
 ## أثر القرارات
 
 عند الموافقة على قرار تُطبَّق آثاره المعروفة آلياً، ويُسجَّل حدث `decision_applied`.
@@ -104,6 +115,7 @@ src/
   snapshot.ts    بناء SAR.json وتوقيعه وتخزينه
   tick.ts        دورة التحديث
   effects.ts     أثر القرارات المعتمدة
+  ndsv.ts        التحقق من توقيع nDSV وسياسة أول مفتاح
   live.ts        إدارة اتصالات WebSocket والبث
   server.ts      Fastify API
   verify-cli.ts  أداة التحقق من التوقيع

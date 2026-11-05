@@ -9,11 +9,14 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.WebSocket
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = Repository(app)
+    private val signer = NdsvSigner(app)
     private val prefs = app.getSharedPreferences("malines", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -116,13 +119,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun ndsvJson(): String? {
         val sar = snapshot ?: return null
-        return repository.buildNdsv(
+        val payload = repository.buildNdsvPayload(
             playerId = playerId,
             stateId = stateId,
             gameTime = sar.time.gameTime,
             snapshotId = sar.meta.snapshotId,
             decisions = localDecisions,
         )
+        val signature = runCatching { signer.sign(CanonicalJson.encode(payload)) }.getOrElse { "" }
+        val envelope = payload + mapOf(
+            "signature" to JsonPrimitive(signature),
+            "keyId" to JsonPrimitive(signer.keyId),
+            "publicKey" to JsonPrimitive(signer.publicKeyB64),
+            "algorithm" to JsonPrimitive("ECDSA-P256-SHA256"),
+        )
+        return JsonObject(envelope).toString()
     }
 
     fun clearLocalDecisions() {

@@ -29,7 +29,9 @@
         }
       }
     },
-    "signature": { "type": "string" },
-    "keyId": { "type": "string" }
+    "signature": { "type": "string", "description": "ECDSA P-256 DER signature, base64" },
+    "keyId": { "type": "string" },
+    "publicKey": { "type": "string", "description": "SPKI DER public key, base64" },
+    "algorithm": { "const": "ECDSA-P256-SHA256" }
   }
 }

@@ -11,6 +11,7 @@ import { runTick } from './tick.js';
 import { worldStats } from './seed.js';
 import { addClient, broadcast, clientCount, removeClient } from './live.js';
 import { applyDecision, type DecisionRow } from './effects.js';
+import { rememberKey, verifyNdsv } from './ndsv.js';
 
 const DECISION_KINDS = new Set(['military', 'economic', 'diplomatic', 'internal']);
 const REVIEW_STATUSES = new Set(['approved', 'rejected']);
@@ -163,12 +164,28 @@ export async function buildServer() {
       stateId?: string;
       gameTime?: string;
       signature?: string;
+      publicKey?: string;
+      keyId?: string;
+      algorithm?: string;
       decisions?: Array<{ kind?: string; action?: string; payload?: unknown; gameTime?: string }>;
     };
 
     if (!body?.playerId || !body?.stateId || !Array.isArray(body.decisions) || body.decisions.length === 0) {
       reply.code(400);
       return { error: 'missing_fields', required: ['playerId', 'stateId', 'decisions[]'] };
+    }
+
+    const verification = verifyNdsv(body as unknown as Record<string, unknown>);
+    if (verification.reason && verification.reason !== 'unsigned') {
+      reply.code(400);
+      return { error: 'invalid_signature', reason: verification.reason };
+    }
+    if (verification.verified) {
+      const remembered = rememberKey(body.playerId, String(body.publicKey), body.keyId);
+      if (!remembered.ok) {
+        reply.code(409);
+        return { error: remembered.reason };
+      }
     }
 
     const imported: string[] = [];
@@ -193,9 +210,16 @@ export async function buildServer() {
       imported.push(decisionId);
     }
 
-    broadcast('ndsv', { stateId: body.stateId, imported: imported.length });
+    broadcast('ndsv', { stateId: body.stateId, imported: imported.length, verified: verification.verified });
     reply.code(201);
-    return { imported: imported.length, ids: imported, status: 'pending_human_review' };
+    return {
+      imported: imported.length,
+      ids: imported,
+      status: 'pending_human_review',
+      verified: verification.verified,
+      reason: verification.reason,
+      fingerprint: verification.fingerprint,
+    };
   });
 
   app.get('/api/console/queue', async (request, reply) => {
