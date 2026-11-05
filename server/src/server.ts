@@ -10,6 +10,7 @@ import { publicKeyB64 } from './signature.js';
 import { runTick } from './tick.js';
 import { worldStats } from './seed.js';
 import { addClient, broadcast, clientCount, removeClient } from './live.js';
+import { applyDecision, type DecisionRow } from './effects.js';
 
 const DECISION_KINDS = new Set(['military', 'economic', 'diplomatic', 'internal']);
 const REVIEW_STATUSES = new Set(['approved', 'rejected']);
@@ -229,6 +230,13 @@ export async function buildServer() {
       reply.code(400);
       return { error: 'invalid_status', allowed: [...REVIEW_STATUSES] };
     }
+    const decision = get<DecisionRow>('SELECT * FROM decisions WHERE id = ?', decisionId);
+    if (!decision) {
+      reply.code(404);
+      return { error: 'not_found' };
+    }
+    const alreadyReviewed = decision.status !== 'pending';
+    const notes = body.status === 'approved' && !alreadyReviewed ? applyDecision(decision) : [];
     run(
       'UPDATE decisions SET status = ?, note = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ?',
       body.status,
@@ -237,8 +245,8 @@ export async function buildServer() {
       Date.now(),
       decisionId,
     );
-    broadcast('review', { id: decisionId, status: body.status, reviewer: body.reviewer ?? 'admin' });
-    return { id: decisionId, status: body.status };
+    broadcast('review', { id: decisionId, status: body.status, reviewer: body.reviewer ?? 'admin', notes });
+    return { id: decisionId, status: body.status, applied: notes.length > 0, notes };
   });
 
   app.post('/api/console/tick', async (request, reply) => {

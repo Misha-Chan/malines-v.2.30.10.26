@@ -76,6 +76,20 @@ npm run verify -- .data/snapshots/SAR-*.json   # التحقق من التوقي�
 
 التطبيق يتصل تلقائياً ويعيد تحميل `SAR.json` عند أي حدث.
 
+## أثر القرارات
+
+عند الموافقة على قرار تُطبَّق آثاره المعروفة آلياً، ويُسجَّل حدث `decision_applied`.
+إعادة مراجعة القرار نفسه لا تعيد تطبيق الأثر (العملية idempotent).
+
+| النوع | الإجراء | الأثر |
+|---|---|---|
+| `military` | أي إجراء يحمل `payload.provinceId` و`payload.level` (1–5) | `garrison += level × 500` (تُرفض المقاطعات البحرية) |
+| `economic` | `build_rail` مع `payload.from` و`payload.to` | `infrastructure.rail += 1` للمقاطعتين |
+| `internal` | أي إجراء يحمل `payload.stability` | تعديل الاستقرار ضمن 0–100 |
+| `diplomatic` | أي إجراء | يُسجَّل فقط ويُترك للحكم البشري |
+
+الأثر المجهول لا يُرفض: يُسجَّل الحدث ليراجعه الحكم البشري.
+
 ## البنية
 
 ```
@@ -89,6 +103,8 @@ src/
   signature.ts   Ed25519
   snapshot.ts    بناء SAR.json وتوقيعه وتخزينه
   tick.ts        دورة التحديث
+  effects.ts     أثر القرارات المعتمدة
+  live.ts        إدارة اتصالات WebSocket والبث
   server.ts      Fastify API
   verify-cli.ts  أداة التحقق من التوقيع
 ```
