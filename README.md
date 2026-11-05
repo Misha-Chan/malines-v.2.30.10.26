@@ -13,7 +13,7 @@
 | `shared/` | مخططات JSON لعقود `SAR` و`nDSV` |
 | `docs/design.md` | وثيقة التصميم الكاملة |
 
-للتشغيل راجع `server/README.md` و`android/README.md`.
+للتشغيل راجع `server/README.md`. لبناء التطبيق: `cd android && ./gradlew :app:assembleDebug`.
 
 ## التشغيل
 
